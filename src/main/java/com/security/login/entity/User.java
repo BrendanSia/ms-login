@@ -21,8 +21,10 @@ public class User implements UserDetails {
     private Long id;
     @Column (name = "username")
     private String username;
-    @Column(name = "password")
+    @Column(nullable = false)
     private String password;
+    @Column
+    private String email;
     @Column(name = "roles")
     private List<String> roles;
     @Column(name = "is_admin")

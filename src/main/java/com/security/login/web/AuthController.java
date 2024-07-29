@@ -1,25 +1,17 @@
 package com.security.login.web;
 
-import com.security.login.config.PasswordEncoderConfig;
+import com.security.login.config.ApplicationConfiguration;
 import com.security.login.dto.LoginRequestDTO;
 import com.security.login.dto.LoginResponseDTO;
 import com.security.login.entity.User;
 import com.security.login.service.AuthService;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -27,7 +19,6 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
-    private final PasswordEncoderConfig encoderConfig;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(
@@ -42,5 +33,14 @@ public class AuthController {
             responseDTO.setErrorMessage(ex.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseDTO);
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<User> authenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        User currentUser = (User) authentication.getDetails();
+
+        return ResponseEntity.ok(currentUser);
     }
 }

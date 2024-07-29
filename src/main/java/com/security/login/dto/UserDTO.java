@@ -9,5 +9,6 @@ import java.util.List;
 @Setter
 public class UserDTO {
     private String username;
+    private String email;
     private List<String> roles;
 }
