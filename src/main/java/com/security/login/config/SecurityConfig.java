@@ -15,6 +15,10 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
+    public String secretKey() {
+        return "2f712123284e4f7ed0d93ab3ede3f702f4b0fd97dc42bbf2c69c7c7924b47a58";
+    }
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeRequests(authorizeRequests -> authorizeRequests.anyRequest()
                         .permitAll())
