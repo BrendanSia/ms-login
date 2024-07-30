@@ -3,18 +3,16 @@ package com.security.login.service;
 import com.security.login.config.SecurityConfig;
 import com.security.login.dto.LoginResponseDTO;
 import com.security.login.dto.UserDTO;
+import com.security.login.dto.UserRequestDTO;
 import com.security.login.entity.User;
 import com.security.login.repository.UserRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Builder
@@ -22,6 +20,19 @@ import java.util.Map;
 public class AuthService {
     private final UserRepository userRepository;
     private SecurityConfig securityConfig;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+
+    public User signup(UserRequestDTO input) {
+        User user = new User();
+        user.setUsername(input.getUsername());
+        user.setFullName(input.getFullName());
+        user.setEmail(input.getEmail());
+        user.setPassword(passwordEncoder.encode(input.getPassword()));
+        setRoles(input, user);
+
+        return userRepository.save(user);
+    }
 
     public LoginResponseDTO findByUsername(String username) {
         User user = userRepository.findByUsername(username);
@@ -29,7 +40,7 @@ public class AuthService {
             throw new UsernameNotFoundException("User not found with username: " + username);
         }
 
-        String token = generateToken(user);
+        String token = jwtService.generateToken(user);
         String message = "Hello " + (user.isAdmin() ? "ADMIN" : "USER");
 
         UserDTO userDTO = new UserDTO();
@@ -45,15 +56,44 @@ public class AuthService {
         return response;
     }
 
-    private String generateToken(User user) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", user.isAdmin() ? "ADMIN" : "USER");
+    public List<User> allUsers() {
+        List<User> users = new ArrayList<>();
 
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(user.getUsername())
-                .setExpiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(SignatureAlgorithm.HS256, securityConfig.secretKey().getBytes())
-                .compact();
+        userRepository.findAll().forEach(users::add);
+
+        return users;
+    }
+
+    public User updateUser(UserRequestDTO requestDTO) {
+        User existingUser = userRepository.findByUsername(requestDTO.getUsername());
+        if (Objects.isNull(existingUser)) {
+            throw new UsernameNotFoundException(requestDTO.getUsername());
+        }
+        existingUser.setUsername(requestDTO.getUsername());
+        existingUser.setEmail(requestDTO.getEmail());
+        existingUser.setAdmin(requestDTO.getIsAdmin());
+        setRoles(requestDTO, existingUser);
+
+        userRepository.saveAndFlush(existingUser);
+        return existingUser;
+    }
+
+    public void setRoles(UserRequestDTO requestDTO, User user) {
+        if (Objects.nonNull(requestDTO.getIsAdmin()) && Objects.equals(true, requestDTO.getIsAdmin())) {
+            user.setAdmin(requestDTO.getIsAdmin());
+
+            List<String> roles = new ArrayList<>();
+            roles.add("ADMIN");
+            roles.add("EMPLOYEE");
+
+            user.setRoles(roles);
+        } else {
+            user.setAdmin(false);
+
+            List<String> roles = new ArrayList<>();
+            roles.add("EMPLOYEE");
+
+            user.setRoles(roles);
+        }
     }
 }

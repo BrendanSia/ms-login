@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Setter
 @Getter
@@ -23,16 +24,19 @@ public class User implements UserDetails {
     private String username;
     @Column(nullable = false)
     private String password;
-    @Column
+    @Column(name = "full_name")
+    private String fullName;
+    @Column(name = "email")
     private String email;
     @Column(name = "roles")
     private List<String> roles;
     @Column(name = "is_admin")
     private boolean isAdmin;
 
-    @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority(isAdmin ? "ROLE_ADMIN" : "ROLE_USER"));
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .collect(Collectors.toList());
     }
 
     @Override

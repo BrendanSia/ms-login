@@ -1,17 +1,23 @@
 package com.security.login.web;
 
-import com.security.login.config.ApplicationConfiguration;
+import com.security.login.dto.BaseResponseDTO;
 import com.security.login.dto.LoginRequestDTO;
 import com.security.login.dto.LoginResponseDTO;
+import com.security.login.dto.UserRequestDTO;
 import com.security.login.entity.User;
+import com.security.login.exceptions.InsufficientPermissionExcpetion;
+import com.security.login.exceptions.InvalidTokenException;
 import com.security.login.service.AuthService;
+import com.security.login.service.JwtService;
+import io.jsonwebtoken.Claims;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -19,6 +25,16 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
+
+    @PostMapping("/signup")
+    public ResponseEntity<User> register(
+            @RequestBody UserRequestDTO userRequestDTO) {
+        User registeredUser = authService.signup(userRequestDTO);
+
+        return ResponseEntity.ok(registeredUser);
+    }
+
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(
@@ -35,12 +51,48 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<User> authenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    @GetMapping("/all")
+    public ResponseEntity<BaseResponseDTO> allUsers(
+            @RequestHeader(name = "jwt-token") String token
+    ) {
+        BaseResponseDTO responseDTO = new BaseResponseDTO();
+        // Validate token
+        try {
 
-        User currentUser = (User) authentication.getDetails();
+            validateToken(token);
 
-        return ResponseEntity.ok(currentUser);
+            List <User> users = authService.allUsers();
+            responseDTO.setStatus("SUCCESS");
+            responseDTO.setData(users);
+            return ResponseEntity.ok(responseDTO);
+
+        } catch (InvalidTokenException e) {
+            responseDTO.setStatus("FAIL");
+            responseDTO.setData(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseDTO);
+        } catch (InsufficientPermissionExcpetion e) {
+            responseDTO.setStatus("FAIL");
+            responseDTO.setData(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseDTO);
+        }
+    }
+
+    @PostMapping(value="/update")
+    public ResponseEntity<User> updateUser(
+            @Valid @RequestBody UserRequestDTO requestDTO
+    ){
+        User updateUser = authService.updateUser(requestDTO);
+        return ResponseEntity.ok(updateUser);
+    }
+
+    public void validateToken(String token) throws InvalidTokenException, InsufficientPermissionExcpetion {
+        Claims claims = jwtService.extractAllClaims(token);
+        if (!jwtService.controllerCheckToken(token, claims.getSubject())) {
+            throw new InvalidTokenException();
+        }
+        if (!jwtService.extractRoles(token).contains("ROLE_ADMIN")) {
+            throw new InsufficientPermissionExcpetion();
+        }
+
     }
 }

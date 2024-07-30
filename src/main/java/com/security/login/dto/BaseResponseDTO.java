@@ -6,8 +6,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BaseResponseDTO {
-    private LoginResponseDTO login;
-    private String token;
-
-    private String errorMessage;
+    private String status;
+    private Object data;
 }
