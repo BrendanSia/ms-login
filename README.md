@@ -9,13 +9,6 @@ This project demonstrates user authentication and authorization using Spring Sec
 - **Role-Based Access**: Restrict access based on user roles.
 - **JWT Tokens**: Use JWT for secure authentication.
 
-## API Endpoints
-
-- **Register User**: `POST /api/auth/register`
-- **Login**: `POST /api/auth/login`
-- **User Info**: `GET /api/user/info` (requires `User` role)
-- **Admin Dashboard**: `GET /api/admin/dashboard` (requires `Admin` role)
-
 ## Postman Collection
 
 A Postman collection to test the API endpoints has been included in the `resources` folder.
