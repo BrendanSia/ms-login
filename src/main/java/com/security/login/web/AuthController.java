@@ -59,7 +59,7 @@ public class AuthController {
         // Validate token
         try {
 
-            validateToken(token);
+            validateAdminToken(token);
 
             List <User> users = authService.allUsers();
             responseDTO.setStatus("SUCCESS");
@@ -78,14 +78,31 @@ public class AuthController {
     }
 
     @PostMapping(value="/update")
-    public ResponseEntity<User> updateUser(
+    public ResponseEntity<BaseResponseDTO> updateUser(
+            @RequestHeader(name = "jwt-token") String token,
             @Valid @RequestBody UserRequestDTO requestDTO
     ){
-        User updateUser = authService.updateUser(requestDTO);
-        return ResponseEntity.ok(updateUser);
+        BaseResponseDTO responseDTO = new BaseResponseDTO();
+        try {
+            validateAdminToken(token);
+            User updateUser = authService.updateUser(requestDTO);
+
+            responseDTO.setStatus("SUCCESS");
+            responseDTO.setData(updateUser);
+
+            return ResponseEntity.ok(responseDTO);
+        } catch (InvalidTokenException e) {
+            responseDTO.setStatus("FAIL");
+            responseDTO.setData(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseDTO);
+        } catch (InsufficientPermissionExcpetion e) {
+            responseDTO.setStatus("FAIL");
+            responseDTO.setData(e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseDTO);
+        }
     }
 
-    public void validateToken(String token) throws InvalidTokenException, InsufficientPermissionExcpetion {
+    public void validateAdminToken(String token) throws InvalidTokenException, InsufficientPermissionExcpetion {
         Claims claims = jwtService.extractAllClaims(token);
         if (!jwtService.controllerCheckToken(token, claims.getSubject())) {
             throw new InvalidTokenException();
@@ -93,6 +110,5 @@ public class AuthController {
         if (!jwtService.extractRoles(token).contains("ROLE_ADMIN")) {
             throw new InsufficientPermissionExcpetion();
         }
-
     }
 }
